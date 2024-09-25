@@ -4,13 +4,12 @@ const path = require('path');
 const app = express();
 const cors = require('cors');
 
+// Utility functions
 function findIndex(arr, id) {
   for (var i of arr) {
     if (i.id == id) return arr.indexOf(i);
-
   }
   return -1;
-
 }
 
 function deleteItemIndex(arr, id) {
@@ -21,18 +20,26 @@ function deleteItemIndex(arr, id) {
   return newTodo;
 }
 
+// Middleware
 app.use(bodyParser.json());
-app.use(cors(
-  {
+
+// CORS configuration
+if (process.env.NODE_ENV === 'production') {
+  app.use(cors({
     origin: ["https://mern-todo-mayank.vercel.app"],
-  }
-));
+  }));
+} else {
+  app.use(cors({
+    origin: ["http://localhost:4173"], // For development
+  }));
+}
 
 var todo = []
 
+// API routes
 app.get('/todos', (req, res) => {
   res.status(200).send(todo);
-})
+});
 
 app.get('/todos/:id', (req, res) => {
   var todoIndex = findIndex(todo, parseInt(req.params.id));
@@ -42,54 +49,55 @@ app.get('/todos/:id', (req, res) => {
     res.json(todo[todoIndex]);
   }
 });
-var counter = 1;
-app.post('/todos', (req, res) => {
 
+app.post('/todos', (req, res) => {
   var newTodo = {
     id: counter++,
     title: req.body.title,
     description: req.body.description
   }
-  todo.push(newTodo)
-  res.status(201).send(newTodo)
-})
+  todo.push(newTodo);
+  res.status(201).send(newTodo);
+});
 
 app.delete('/todos/:id', (req, res) => {
   const id = parseInt(req.params.id);
   todo = deleteItemIndex(todo, id);
-
   res.status(200).json(todo);
-})
+});
 
 app.put('/todos/:id', (req, res) => {
   const todoIndex = findIndex(todo, parseInt(req.params.id));
   if (todoIndex === -1) {
     res.status(404).send('Todo item not found.');
   } else {
-
     if (req.body.title) {
-      todo[todoIndex].title = req.body.title
+      todo[todoIndex].title = req.body.title;
     }
     if (req.body.description) {
-      todo[todoIndex].description = req.body.description
+      todo[todoIndex].description = req.body.description;
     }
-    res.status(200).json(todo)
+    res.status(200).json(todo);
   }
-})
+});
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'))
-})
+// Serve the React frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
 
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'build', 'index.html'));
+  });
+}
 
-
+// Catch-all for undefined routes
 app.use('*', (req, res) => {
-  res.status(404).send('Route not defined')
-})
+  res.status(404).send('Route not defined');
+});
 
-
+// Start the server
 app.listen(3000, () => {
-  console.log(`Listening at http://localhost:3000`)
-})
+  console.log(`Listening at http://localhost:3000`);
+});
 
 module.exports = app;
